@@ -5,7 +5,23 @@ import type { GeneralResponse, User } from "../../api/types";
 import { RHYTHM_OPTIONS, SKILL_OPTIONS, STATUS_OPTIONS } from "../../constants/userOptions";
 import Modal from "../../components/Modal";
 
-export default function MeSection() {
+type MeSectionProps = {
+  onOpenEvent: (id: string) => void;
+};
+
+const formatRoleLabel = (role: "Administrator" | "pm" | "member") => {
+  if (role === "Administrator") return "Administrator";
+  if (role === "pm") return "PM";
+  return "Member";
+};
+
+const getRoleBadgeClassName = (role: "Administrator" | "pm" | "member") => {
+  if (role === "Administrator") return "role-badge role-admin";
+  if (role === "pm") return "role-badge role-pm";
+  return "role-badge role-member";
+};
+
+export default function MeSection({ onOpenEvent }: MeSectionProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
@@ -87,8 +103,43 @@ export default function MeSection() {
             <h3>{user.discord?.display_name ?? user.discord?.name ?? "User"}</h3>
             <p className="muted">Discord ID: {user.discord_id}</p>
             <p>Status: {user.status}</p>
+            <div className="detail-sub role-block">
+              <span className="label">Role</span>
+              <div className="role-badges">
+                {(user.user_role ?? []).length === 0 && (
+                  <span className="role-badge role-none">No role</span>
+                )}
+                {(user.user_role ?? []).map((role) => (
+                  <span key={role} className={getRoleBadgeClassName(role)}>
+                    {formatRoleLabel(role)}
+                  </span>
+                ))}
+              </div>
+            </div>
             <p>Skills: {(user.skills ?? []).join(", ") || "N/A"}</p>
             <p>Rhythm Games: {(user.rhythm_games ?? []).join(", ") || "N/A"}</p>
+            <div className="detail-sub detail-sub-spacious">
+              <span className="label">Joined Events</span>
+              {(user.events ?? []).length === 0 && (
+                <p className="muted">No joined events.</p>
+              )}
+              <div className="list scrollable detail-list">
+                {(user.events ?? []).map((event) => (
+                  <button
+                    key={event.id}
+                    type="button"
+                    className="list-item detail-list-item"
+                    onClick={() => onOpenEvent(event.id)}
+                  >
+                    <div className="list-title">{event.title}</div>
+                    <div className="list-meta">
+                      <span>{event.type}</span>
+                      <span>DB ID: {event.id}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <form className="detail-card form" onSubmit={handleSubmit}>
             <h3>Update Profile</h3>

@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type UIEvent } from "react";
 import { apiRequest } from "../../api/client";
 import { API_ENDPOINTS } from "../../api/endpoints";
-import type { EventItem, GeneralResponse } from "../../api/types";
+import type { DiscordChannel, EventItem, GeneralResponse } from "../../api/types";
 import { formatTimestampToLocal } from "../../utils/date";
 import Modal from "../../components/Modal";
 
@@ -10,24 +10,51 @@ type EventType = "ctftime" | "custom";
 type EventSectionProps = {
   selectedEventId: string | null;
   onSelectEvent: (id: string) => void;
+  onOpenUser: (id: string) => void;
 };
 
-export default function EventSection({ selectedEventId, onSelectEvent }: EventSectionProps) {
+type EventCursor = {
+  beforeId: string | null;
+  finishBefore: string | null;
+};
+
+const PAGE_SIZE = 20;
+
+export default function EventSection({ selectedEventId, onSelectEvent, onOpenUser }: EventSectionProps) {
   const [eventType, setEventType] = useState<EventType>("ctftime");
   const [archivedOnly, setArchivedOnly] = useState(false);
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [cursor, setCursor] = useState<EventCursor>({ beforeId: null, finishBefore: null });
+  const [hasMore, setHasMore] = useState(false);
   const [selected, setSelected] = useState<EventItem | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingInitial, setLoadingInitial] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [notice, setNotice] = useState<string>("");
+  const [guildChannels, setGuildChannels] = useState<DiscordChannel[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalVariant, setModalVariant] = useState<"alert" | "confirm" | "input">("alert");
+  const [modalVariant, setModalVariant] = useState<"alert" | "confirm" | "input" | "select">("alert");
   const [modalTitle, setModalTitle] = useState("");
   const [modalMessage, setModalMessage] = useState("");
   const [modalInputLabel, setModalInputLabel] = useState("");
   const [modalInputPlaceholder, setModalInputPlaceholder] = useState("");
   const [modalInputDefault, setModalInputDefault] = useState("");
+  const [modalSelectOptions, setModalSelectOptions] = useState<{ label: string; value: string }[]>([]);
   const [modalConfirmLabel, setModalConfirmLabel] = useState("OK");
   const [modalAction, setModalAction] = useState<(value?: string) => void>(() => () => {});
+
+  const getSafeChannelLink = (jumpUrl?: string | null) => {
+    if (!jumpUrl) return null;
+    if (jumpUrl.startsWith("https://discord.com/channels/")) {
+      return jumpUrl;
+    }
+    return null;
+  };
+
+  const appendEvents = (oldEvents: EventItem[], newEvents: EventItem[]) => {
+    const oldEventIds = new Set(oldEvents.map((event) => event.id));
+    const filtered = newEvents.filter((event) => !oldEventIds.has(event.id));
+    return [...oldEvents, ...filtered];
+  };
 
   const formatErrorDetails = (result: { errorData?: unknown | null }) => {
     if (!result.errorData) return "";
@@ -74,41 +101,177 @@ export default function EventSection({ selectedEventId, onSelectEvent }: EventSe
     setModalOpen(true);
   };
 
-  const loadEvents = async (nextType = eventType, nextArchivedOnly = archivedOnly) => {
-    setLoading(true);
+  const openSelectModal = (
+    title: string,
+    message: string,
+    inputLabel: string,
+    options: { label: string; value: string }[],
+    defaultValue: string,
+    onConfirm: (value: string) => void
+  ) => {
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalInputLabel(inputLabel);
+    setModalInputPlaceholder("");
+    setModalInputDefault(defaultValue);
+    setModalSelectOptions(options);
+    setModalVariant("select");
+    setModalConfirmLabel("Confirm");
+    setModalAction(() => (value?: string) => onConfirm(value ?? ""));
+    setModalOpen(true);
+  };
+
+  const buildEventListPath = (
+    nextType: EventType,
+    nextArchivedOnly: boolean,
+    nextCursor: EventCursor
+  ) => {
+    const basePath =
+      nextType === "ctftime" ? API_ENDPOINTS.events.listCtfTime : API_ENDPOINTS.events.listCustom;
     const query = new URLSearchParams({
-      type: nextType,
       archived: nextArchivedOnly ? "true" : "false",
-    }).toString();
-    const result = await apiRequest<EventItem[]>(`${API_ENDPOINTS.events.list}?${query}`);
+      limit: String(PAGE_SIZE),
+    });
+    if (nextType === "ctftime" && nextCursor.finishBefore && nextCursor.beforeId) {
+      query.set("finish_before", nextCursor.finishBefore);
+      query.set("before_id", nextCursor.beforeId);
+    }
+    if (nextType === "custom" && nextCursor.beforeId) {
+      query.set("before_id", nextCursor.beforeId);
+    }
+    return `${basePath}?${query.toString()}`;
+  };
+
+  const fetchOnePage = async (
+    nextType: EventType,
+    nextArchivedOnly: boolean,
+    nextCursor: EventCursor
+  ) => {
+    const result = await apiRequest<EventItem[]>(
+      buildEventListPath(nextType, nextArchivedOnly, nextCursor)
+    );
     if (result.ok && result.data) {
-      setEvents(result.data);
+      return {
+        ok: true as const,
+        data: result.data,
+      };
+    }
+    return {
+      ok: false as const,
+      error: result.error ?? "Failed to load events",
+      details: formatErrorDetails(result),
+    };
+  };
+
+  const calculateNextCursor = (nextType: EventType, loadedEvents: EventItem[]) => {
+    if (loadedEvents.length === 0) {
+      return { beforeId: null, finishBefore: null };
+    }
+    const lastEvent = loadedEvents[loadedEvents.length - 1];
+    if (nextType === "ctftime") {
+      return {
+        beforeId: lastEvent.id,
+        finishBefore: lastEvent.finish ?? null,
+      };
+    }
+    return {
+      beforeId: lastEvent.id,
+      finishBefore: null,
+    };
+  };
+
+  const loadFirstPage = async (nextType = eventType, nextArchivedOnly = archivedOnly) => {
+    setLoadingInitial(true);
+    const firstCursor: EventCursor = { beforeId: null, finishBefore: null };
+    const page = await fetchOnePage(nextType, nextArchivedOnly, firstCursor);
+    if (page.ok) {
+      const nextEvents = page.data;
+      setEvents(nextEvents);
       const nextSelected =
-        result.data.find((event) => event.id === selectedEventId) ?? result.data[0] ?? null;
+        selectedEventId
+          ? (nextEvents.find((event) => event.id === selectedEventId) ?? null)
+          : (nextEvents[0] ?? null);
       setSelected(nextSelected);
       if (nextSelected && nextSelected.id !== selectedEventId) {
         onSelectEvent(nextSelected.id);
       }
+      setCursor(calculateNextCursor(nextType, nextEvents));
+      setHasMore(nextEvents.length === PAGE_SIZE);
       setNotice("");
     } else {
       setEvents([]);
       setSelected(null);
-      const detail = formatErrorDetails(result);
-      setNotice(detail ? `${result.error ?? "Failed to load events"}\n${detail}` : result.error ?? "Failed to load events");
+      setCursor({ beforeId: null, finishBefore: null });
+      setHasMore(false);
+      setNotice(page.details ? `${page.error}\n${page.details}` : page.error);
     }
-    setLoading(false);
+    setLoadingInitial(false);
+  };
+
+  const loadGuildChannels = async () => {
+    const result = await apiRequest<DiscordChannel[]>(API_ENDPOINTS.guild.textChannels);
+    if (!result.ok || !result.data) {
+      setGuildChannels([]);
+      return [];
+    }
+    setGuildChannels(result.data);
+    return result.data;
+  };
+
+  const loadNextPage = async () => {
+    if (!hasMore || loadingInitial || loadingMore) return;
+    setLoadingMore(true);
+    const page = await fetchOnePage(eventType, archivedOnly, cursor);
+    if (page.ok) {
+      let mergedEvents: EventItem[] = [];
+      setEvents((prev) => {
+        mergedEvents = appendEvents(prev, page.data);
+        return mergedEvents;
+      });
+      setCursor(calculateNextCursor(eventType, mergedEvents));
+      setHasMore(page.data.length === PAGE_SIZE);
+      setNotice("");
+    } else {
+      setNotice(page.details ? `${page.error}\n${page.details}` : page.error);
+      setHasMore(false);
+    }
+    setLoadingMore(false);
+  };
+
+  const refreshSelectedEvent = async (eventId: string) => {
+    const detail = await apiRequest<EventItem>(API_ENDPOINTS.events.detail(eventId));
+    const event = detail.ok && detail.data ? detail.data : null;
+    if (!event) return;
+    setSelected(event);
+    setEvents((prev) =>
+      prev.some((item) => item.id === event.id)
+        ? prev.map((item) => (item.id === event.id ? { ...item, ...event } : item))
+        : prev
+    );
+  };
+
+  const handleEventListScroll = (event: UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget;
+    const remain = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (remain <= 80) {
+      loadNextPage();
+    }
   };
 
   useEffect(() => {
-    loadEvents();
+    loadFirstPage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventType, archivedOnly]);
 
   useEffect(() => {
+    loadGuildChannels();
+  }, []);
+
+  useEffect(() => {
     if (!selectedEventId) return;
     const loadById = async () => {
-      const result = await apiRequest<EventItem[]>(API_ENDPOINTS.events.detail(selectedEventId));
-      const event = result.ok && result.data ? result.data[0] : null;
+      const result = await apiRequest<EventItem>(API_ENDPOINTS.events.detail(selectedEventId));
+      const event = result.ok && result.data ? result.data : null;
       if (!event) {
         return;
       }
@@ -149,8 +312,11 @@ export default function EventSection({ selectedEventId, onSelectEvent }: EventSe
         return;
       }
       openAlert("Success", "Custom event created");
-      setEventType("custom");
-      await loadEvents("custom", archivedOnly);
+      if (eventType === "custom") {
+        await loadFirstPage("custom", archivedOnly);
+      } else {
+        setEventType("custom");
+      }
     }
     );
   };
@@ -166,16 +332,7 @@ export default function EventSection({ selectedEventId, onSelectEvent }: EventSe
       result.ok ? "" : formatErrorDetails(result)
     );
     if (result.ok) {
-      const detail = await apiRequest<EventItem[]>(API_ENDPOINTS.events.detail(selected.id));
-      const event = detail.ok && detail.data ? detail.data[0] : null;
-      if (event) {
-        setSelected(event);
-        setEvents((prev) =>
-          prev.some((item) => item.id === event.id)
-            ? prev.map((item) => (item.id === event.id ? { ...item, ...event } : item))
-            : prev
-        );
-      }
+      await refreshSelectedEvent(selected.id);
     }
   };
 
@@ -191,24 +348,15 @@ export default function EventSection({ selectedEventId, onSelectEvent }: EventSe
         result.ok ? "" : formatErrorDetails(result)
       );
       if (result.ok) {
-        const detail = await apiRequest<EventItem[]>(API_ENDPOINTS.events.detail(selected.id));
-        const event = detail.ok && detail.data ? detail.data[0] : null;
-        if (event) {
-          setSelected(event);
-          setEvents((prev) =>
-            prev.some((item) => item.id === event.id)
-              ? prev.map((item) => (item.id === event.id ? { ...item, ...event } : item))
-              : prev
-          );
-        }
+        await refreshSelectedEvent(selected.id);
       }
     });
   };
 
   const handleRelink = async (channelIdValue: string) => {
     if (!selected) return;
-    if (!/^\d+$/.test(channelIdValue)) {
-      openAlert("Invalid Input", "Please provide a valid channel ID");
+    if (!channelIdValue) {
+      openAlert("Invalid Input", "Please select a channel.");
       return;
     }
     const result = await apiRequest<GeneralResponse>(API_ENDPOINTS.events.relink(selected.id), {
@@ -221,18 +369,38 @@ export default function EventSection({ selectedEventId, onSelectEvent }: EventSe
       result.ok ? "" : formatErrorDetails(result)
     );
     if (result.ok) {
-      const detail = await apiRequest<EventItem[]>(API_ENDPOINTS.events.detail(selected.id));
-      const event = detail.ok && detail.data ? detail.data[0] : null;
-      if (event) {
-        setSelected(event);
-        setEvents((prev) =>
-          prev.some((item) => item.id === event.id)
-            ? prev.map((item) => (item.id === event.id ? { ...item, ...event } : item))
-            : prev
-        );
-      }
+      await refreshSelectedEvent(selected.id);
     }
   };
+
+  const handleOpenRelinkModal = async () => {
+    if (!selected) return;
+    const channels = guildChannels.length > 0 ? guildChannels : await loadGuildChannels();
+    if (channels.length === 0) {
+      openAlert("No Channel", "No available text channel for relink.");
+      return;
+    }
+    const options = channels.map((channel) => ({
+      value: channel.id,
+      label: `${channel.name} (${channel.id})`,
+    }));
+    const defaultValue =
+      selected.channel_id && channels.some((channel) => channel.id === selected.channel_id)
+        ? selected.channel_id
+        : channels[0].id;
+    openSelectModal(
+      "Relink Channel",
+      "Select a channel and confirm.",
+      "Channel",
+      options,
+      defaultValue,
+      async (value) => {
+        await handleRelink(value);
+      }
+    );
+  };
+
+  const safeChannelLink = getSafeChannelLink(selected?.channel?.jump_url);
 
   return (
     <section className="section">
@@ -280,10 +448,10 @@ export default function EventSection({ selectedEventId, onSelectEvent }: EventSe
       </div>
       {notice && <p className="notice">{notice}</p>}
       <div className="grid">
-        <div className="list scrollable">
-          {loading && <p className="muted">Loading...</p>}
-          {!loading && events.length === 0 && <p className="muted">No events found.</p>}
-          {!loading &&
+        <div className="list scrollable" onScroll={handleEventListScroll}>
+          {loadingInitial && <p className="muted">Loading...</p>}
+          {!loadingInitial && events.length === 0 && <p className="muted">No events found.</p>}
+          {!loadingInitial &&
             events.map((event) => (
               <button
                 key={event.id}
@@ -297,10 +465,17 @@ export default function EventSection({ selectedEventId, onSelectEvent }: EventSe
                 <div className="list-title">{event.title}</div>
                 <div className="list-meta">
                   <span>{event.type}</span>
-                  {event.archived && <span className="badge">Archived</span>}
                 </div>
+                {(event.channel_id || event.now_running || event.archived) && (
+                  <div className="list-flags">
+                    {event.channel_id && <span className="badge badge-channel">⭐ Channel created</span>}
+                    {event.now_running && <span className="badge badge-running">🏃 Now running</span>}
+                    {event.archived && <span className="badge badge-archived">📦 Archived</span>}
+                  </div>
+                )}
               </button>
             ))}
+          {loadingMore && <p className="muted">Loading more...</p>}
         </div>
         <div className="detail">
           {selected ? (
@@ -332,8 +507,13 @@ export default function EventSection({ selectedEventId, onSelectEvent }: EventSe
                   <span>{selected.users?.length ?? 0}</span>
                 </div>
               </div>
-              {selected.channel?.jump_url && (
-                <a className="link" href={selected.channel.jump_url} target="_blank" rel="noreferrer">
+              {safeChannelLink && (
+                <a
+                  className="link"
+                  href={safeChannelLink}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   Open Discord Channel
                 </a>
               )}
@@ -347,20 +527,33 @@ export default function EventSection({ selectedEventId, onSelectEvent }: EventSe
                 <button
                   type="button"
                   className="secondary"
-                  onClick={() => {
-                    openInputModal(
-                      "Relink Channel",
-                      "Provide a channel ID and confirm.",
-                      "Channel ID",
-                      "Channel ID",
-                      async (value) => {
-                        await handleRelink(value);
-                      }
-                    );
-                  }}
+                  onClick={handleOpenRelinkModal}
                 >
                   (PM) Relink
                 </button>
+              </div>
+              <div className="detail-sub detail-sub-spacious">
+                <span className="label">Joined Users</span>
+                {(selected.users ?? []).length === 0 && (
+                  <p className="muted">No joined users.</p>
+                )}
+                <div className="list scrollable detail-list">
+                  {(selected.users ?? []).map((user) => (
+                    <button
+                      key={user.discord_id}
+                      type="button"
+                      className="list-item detail-list-item"
+                      onClick={() => onOpenUser(user.discord_id)}
+                    >
+                      <div className="list-title">
+                        {user.discord?.display_name ?? user.discord?.name ?? "Unknown user"}
+                      </div>
+                      <div className="list-meta">
+                        <span>ID: {user.discord_id}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (
@@ -376,6 +569,7 @@ export default function EventSection({ selectedEventId, onSelectEvent }: EventSe
         inputLabel={modalInputLabel}
         inputPlaceholder={modalInputPlaceholder}
         inputDefaultValue={modalInputDefault}
+        selectOptions={modalSelectOptions}
         confirmLabel={modalConfirmLabel}
         onCancel={() => setModalOpen(false)}
         onConfirm={(value) => {

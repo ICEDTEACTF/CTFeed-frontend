@@ -113,6 +113,12 @@ a {
   border-bottom: 1px solid var(--border);
 }
 
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -122,6 +128,29 @@ a {
   cursor: pointer;
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+.github-button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.github-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  object-fit: contain;
+}
+
+.github-button:hover {
+  border-color: rgba(54, 195, 184, 0.55);
 }
 
 .menu {
@@ -200,6 +229,76 @@ a {
   border-radius: 999px;
   cursor: pointer;
   font-weight: 500;
+}
+
+.me-menu-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.me-menu-name {
+  font-weight: 600;
+}
+
+.me-menu-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.me-menu-badge {
+  font-size: 0.68rem;
+  line-height: 1.1;
+  padding: 2px 8px;
+}
+
+.menu-item.active .me-menu-badge.role-admin {
+  background: rgba(255, 221, 120, 0.9);
+  border-color: rgba(255, 221, 120, 1);
+  color: #3b2b00;
+}
+
+.menu-item.active .me-menu-badge.role-pm {
+  background: rgba(255, 182, 223, 0.9);
+  border-color: rgba(255, 182, 223, 1);
+  color: #4f1239;
+}
+
+.menu-item.active .me-menu-badge.role-member {
+  background: rgba(170, 246, 198, 0.95);
+  border-color: rgba(170, 246, 198, 1);
+  color: #0d3c26;
+}
+
+.menu-item.active .me-menu-badge.role-none {
+  background: rgba(218, 225, 235, 0.92);
+  border-color: rgba(218, 225, 235, 1);
+  color: #1f2a3a;
+}
+
+.menu-panel-item.active .me-menu-badge.role-admin {
+  background: rgba(251, 191, 36, 0.3);
+  border-color: rgba(251, 191, 36, 0.9);
+  color: #ffe08b;
+}
+
+.menu-panel-item.active .me-menu-badge.role-pm {
+  background: rgba(244, 114, 182, 0.28);
+  border-color: rgba(244, 114, 182, 0.85);
+  color: #ffc4e4;
+}
+
+.menu-panel-item.active .me-menu-badge.role-member {
+  background: rgba(74, 222, 128, 0.28);
+  border-color: rgba(74, 222, 128, 0.85);
+  color: #b8f6cf;
+}
+
+.menu-panel-item.active .me-menu-badge.role-none {
+  background: rgba(148, 163, 184, 0.28);
+  border-color: rgba(148, 163, 184, 0.85);
+  color: #e2e7ef;
 }
 
 .menu-item.active {
@@ -340,6 +439,14 @@ a {
   color: var(--ink);
 }
 
+.modal-field select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+
 .grid {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(280px, 2fr);
@@ -383,11 +490,37 @@ a {
   align-items: center;
 }
 
+.list-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .badge {
   background: rgba(54, 195, 184, 0.16);
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 0.75rem;
+  border: 1px solid transparent;
+}
+
+.badge-channel {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.75);
+  color: #8fe8ff;
+}
+
+.badge-running {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: rgba(248, 113, 113, 0.8);
+  color: #ff9f9f;
+}
+
+.badge-archived {
+  background: rgba(148, 163, 184, 0.2);
+  border-color: rgba(148, 163, 184, 0.8);
+  color: #d3d9e2;
 }
 
 .detail {
@@ -530,6 +663,70 @@ a {
   margin-top: 18px;
 }
 
+.detail-sub-spacious {
+  margin-top: 26px;
+}
+
+.detail-list {
+  margin-top: 10px;
+  max-height: min(40vh, 280px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.detail-list-item {
+  width: 100%;
+}
+
+.detail-list-item:hover {
+  border-color: rgba(54, 195, 184, 0.55);
+}
+
+.role-block {
+  margin-top: 14px;
+}
+
+.role-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.role-admin {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.75);
+  color: #ffd87e;
+}
+
+.role-pm {
+  background: rgba(244, 114, 182, 0.2);
+  border-color: rgba(244, 114, 182, 0.75);
+  color: #ffb4dd;
+}
+
+.role-member {
+  background: rgba(74, 222, 128, 0.2);
+  border-color: rgba(74, 222, 128, 0.75);
+  color: #a8f5c3;
+}
+
+.role-none {
+  background: rgba(148, 163, 184, 0.2);
+  border-color: rgba(148, 163, 184, 0.75);
+  color: #d3d9e2;
+}
+
 .detail-card .actions {
   padding-top: 10px;
   border-top: 1px solid var(--border);
@@ -621,12 +818,23 @@ a {
   color: var(--ink);
 }
 
+.config-edit select {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  min-width: 240px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
 .status.ok {
   color: #4fd6a0;
+  white-space: pre-line;
 }
 
 .status.error {
   color: #ff7b6c;
+  white-space: pre-line;
 }
 
 .footer {
@@ -664,6 +872,32 @@ a {
 
   .top-bar {
     padding: 14px 20px;
+  }
+
+  .top-bar-left {
+    gap: 8px;
+  }
+
+  .menu-panel .me-menu-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .menu-panel .me-menu-badges {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .github-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .github-icon {
+    width: 22px;
+    height: 22px;
   }
 }
 

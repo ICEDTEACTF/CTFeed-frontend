@@ -1,13 +1,23 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../api/client";
 import { API_ENDPOINTS } from "../../api/endpoints";
-import type { ConfigItem, ConfigResponse, GeneralResponse } from "../../api/types";
+import type {
+  ConfigItem,
+  ConfigResponse,
+  DiscordCategory,
+  DiscordChannel,
+  DiscordRole,
+  GeneralResponse,
+} from "../../api/types";
 import Modal from "../../components/Modal";
 
 type ConfigState = ConfigItem & { draft: string };
 
 export default function ConfigSection() {
   const [configs, setConfigs] = useState<ConfigState[]>([]);
+  const [guildChannels, setGuildChannels] = useState<DiscordChannel[]>([]);
+  const [guildCategories, setGuildCategories] = useState<DiscordCategory[]>([]);
+  const [guildRoles, setGuildRoles] = useState<DiscordRole[]>([]);
   const [notice, setNotice] = useState("");
   const [canEdit, setCanEdit] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -33,11 +43,34 @@ export default function ConfigSection() {
     }
   };
 
+  const formatStatusMessage = (message: string) => {
+    if (!message.includes(" ID:")) return message;
+    return message.replace(/\s+ID:\s*/, "\nID: ");
+  };
+
   const getConfigKind = (key: string) => {
     if (key.endsWith("CHANNEL_ID")) return "Channel";
     if (key.endsWith("CATEGORY_ID")) return "Category";
     if (key.endsWith("ROLE_ID")) return "Role";
     return "";
+  };
+
+  const getOptionsByKey = (key: string) => {
+    if (key.endsWith("CHANNEL_ID")) return guildChannels;
+    if (key.endsWith("CATEGORY_ID")) return guildCategories;
+    if (key.endsWith("ROLE_ID")) return guildRoles;
+    return [];
+  };
+
+  const loadGuildOptions = async () => {
+    const [channelResult, categoryResult, roleResult] = await Promise.all([
+      apiRequest<DiscordChannel[]>(API_ENDPOINTS.guild.textChannels),
+      apiRequest<DiscordCategory[]>(API_ENDPOINTS.guild.categories),
+      apiRequest<DiscordRole[]>(API_ENDPOINTS.guild.roles),
+    ]);
+    setGuildChannels(channelResult.ok && channelResult.data ? channelResult.data : []);
+    setGuildCategories(categoryResult.ok && categoryResult.data ? categoryResult.data : []);
+    setGuildRoles(roleResult.ok && roleResult.data ? roleResult.data : []);
   };
 
   const loadConfig = async () => {
@@ -61,6 +94,7 @@ export default function ConfigSection() {
 
   useEffect(() => {
     loadConfig();
+    loadGuildOptions();
   }, []);
 
   const updateConfig = async (item: ConfigState) => {
@@ -114,20 +148,40 @@ export default function ConfigSection() {
                   </div>
                 )}
               </div>
-              <p className={item.ok ? "status ok" : "status error"}>{item.message}</p>
+              <p className={item.ok ? "status ok" : "status error"}>{formatStatusMessage(item.message)}</p>
             </div>
             <div className="config-edit">
-              <input
-                type="text"
-                value={item.draft}
-                disabled={!canEdit}
-                onChange={(event) => {
-                  const next = configs.map((config) =>
-                    config.key === item.key ? { ...config, draft: event.target.value } : config
-                  );
-                  setConfigs(next);
-                }}
-              />
+              {getOptionsByKey(item.key).length > 0 ? (
+                <select
+                  value={item.draft}
+                  disabled={!canEdit}
+                  onChange={(event) => {
+                    const next = configs.map((config) =>
+                      config.key === item.key ? { ...config, draft: event.target.value } : config
+                    );
+                    setConfigs(next);
+                  }}
+                >
+                  <option value="">(None)</option>
+                  {getOptionsByKey(item.key).map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name} ({option.id})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={item.draft}
+                  disabled={!canEdit}
+                  onChange={(event) => {
+                    const next = configs.map((config) =>
+                      config.key === item.key ? { ...config, draft: event.target.value } : config
+                    );
+                    setConfigs(next);
+                  }}
+                />
+              )}
               <button
                 type="button"
                 className="primary"

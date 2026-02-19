@@ -6,7 +6,8 @@ export const API_ENDPOINTS = {
     me: "/auth/me",
   },
   events: {
-    list: "/event/",
+    listCtfTime: "/event/ctftime",
+    listCustom: "/event/custom",
     createCustom: "/event/create_custom_event",
     detail: (id: string) => `/event/${id}`,
     join: (id: string) => `/event/${id}/join`,
@@ -20,5 +21,10 @@ export const API_ENDPOINTS = {
   config: {
     list: "/config/",
     update: (key: string) => `/config/${key}`,
+  },
+  guild: {
+    textChannels: "/guild/text_channels",
+    categories: "/guild/categories",
+    roles: "/guild/roles",
   },
 };

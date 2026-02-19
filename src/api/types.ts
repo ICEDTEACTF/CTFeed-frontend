@@ -4,6 +4,17 @@ export type DiscordChannel = {
   name: string;
 };
 
+export type DiscordCategory = {
+  id: string;
+  jump_url: string;
+  name: string;
+};
+
+export type DiscordRole = {
+  id: string;
+  name: string;
+};
+
 export type EventItem = {
   id: string;
   archived: boolean;
@@ -27,6 +38,7 @@ export type DiscordUser = {
 
 export type UserSimple = {
   discord_id: string;
+  user_role: ("Administrator" | "pm" | "member")[];
   status: string;
   skills: string[];
   rhythm_games: string[];

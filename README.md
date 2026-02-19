@@ -13,6 +13,7 @@ This is the frontend Dashboard for [ICEDTEACTF/CTFeed](https://github.com/ICEDTE
     The build output will be in `dist/`.
 
 3. Configure backend
+
     Set these backend environment variables:
     ```
     # example
@@ -22,6 +23,7 @@ This is the frontend Dashboard for [ICEDTEACTF/CTFeed](https://github.com/ICEDTE
     ```
 
 4. Serve `dist/` with a web server  
+
     Make sure SPA fallback is enabled (all routes should return `index.html`).
 
 ## Web server configuration examples

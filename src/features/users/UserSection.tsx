@@ -6,9 +6,22 @@ import type { User } from "../../api/types";
 type UserSectionProps = {
   selectedUserId: string | null;
   onSelectUser: (id: string) => void;
+  onOpenEvent: (id: string) => void;
 };
 
-export default function UserSection({ selectedUserId, onSelectUser }: UserSectionProps) {
+const formatRoleLabel = (role: "Administrator" | "pm" | "member") => {
+  if (role === "Administrator") return "Administrator";
+  if (role === "pm") return "PM";
+  return "Member";
+};
+
+const getRoleBadgeClassName = (role: "Administrator" | "pm" | "member") => {
+  if (role === "Administrator") return "role-badge role-admin";
+  if (role === "pm") return "role-badge role-pm";
+  return "role-badge role-member";
+};
+
+export default function UserSection({ selectedUserId, onSelectUser, onOpenEvent }: UserSectionProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [selected, setSelected] = useState<User | null>(null);
   const [notice, setNotice] = useState("");
@@ -19,9 +32,9 @@ export default function UserSection({ selectedUserId, onSelectUser }: UserSectio
       if (result.ok && result.data) {
         setUsers(result.data);
         const nextSelected =
-          result.data.find((user) => user.discord_id === selectedUserId) ??
-          result.data[0] ??
-          null;
+          selectedUserId
+            ? (result.data.find((user) => user.discord_id === selectedUserId) ?? null)
+            : (result.data[0] ?? null);
         setSelected(nextSelected);
         if (nextSelected && nextSelected.discord_id !== selectedUserId) {
           onSelectUser(nextSelected.discord_id);
@@ -40,8 +53,8 @@ export default function UserSection({ selectedUserId, onSelectUser }: UserSectio
   useEffect(() => {
     if (!selectedUserId) return;
     const loadById = async () => {
-      const result = await apiRequest<User[]>(API_ENDPOINTS.users.detail(selectedUserId));
-      const user = result.ok && result.data ? result.data[0] : null;
+      const result = await apiRequest<User>(API_ENDPOINTS.users.detail(selectedUserId));
+      const user = result.ok && result.data ? result.data : null;
       if (!user) return;
       setSelected(user);
       setUsers((prev) =>
@@ -79,6 +92,16 @@ export default function UserSection({ selectedUserId, onSelectUser }: UserSectio
                 <span>{user.status}</span>
                 <span>{(user.events ?? []).length} events</span>
               </div>
+              <div className="role-badges">
+                {(user.user_role ?? []).length === 0 && (
+                  <span className="role-badge role-none">No role</span>
+                )}
+                {(user.user_role ?? []).map((role) => (
+                  <span key={role} className={getRoleBadgeClassName(role)}>
+                    {formatRoleLabel(role)}
+                  </span>
+                ))}
+              </div>
             </button>
           ))}
         </div>
@@ -88,15 +111,42 @@ export default function UserSection({ selectedUserId, onSelectUser }: UserSectio
               <h3>{selected.discord?.display_name ?? selected.discord?.name ?? "User"}</h3>
               <p className="muted">Discord ID: {selected.discord_id}</p>
               <p>Status: {selected.status}</p>
+              <div className="detail-sub role-block">
+                <span className="label">Role</span>
+                <div className="role-badges">
+                  {(selected.user_role ?? []).length === 0 && (
+                    <span className="role-badge role-none">No role</span>
+                  )}
+                  {(selected.user_role ?? []).map((role) => (
+                    <span key={role} className={getRoleBadgeClassName(role)}>
+                      {formatRoleLabel(role)}
+                    </span>
+                  ))}
+                </div>
+              </div>
               <p>Skills: {(selected.skills ?? []).join(", ") || "N/A"}</p>
               <p>Rhythm Games: {(selected.rhythm_games ?? []).join(", ") || "N/A"}</p>
-              <div className="detail-sub">
-                <span className="label">Events</span>
-                <ul>
+              <div className="detail-sub detail-sub-spacious">
+                <span className="label">Joined Events</span>
+                {(selected.events ?? []).length === 0 && (
+                  <p className="muted">No joined events.</p>
+                )}
+                <div className="list scrollable detail-list">
                   {(selected.events ?? []).map((event) => (
-                    <li key={event.id}>{event.title}</li>
+                    <button
+                      key={event.id}
+                      type="button"
+                      className="list-item detail-list-item"
+                      onClick={() => onOpenEvent(event.id)}
+                    >
+                      <div className="list-title">{event.title}</div>
+                      <div className="list-meta">
+                        <span>{event.type}</span>
+                        <span>DB ID: {event.id}</span>
+                      </div>
+                    </button>
                   ))}
-                </ul>
+                </div>
               </div>
             </div>
           ) : (

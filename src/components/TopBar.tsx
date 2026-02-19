@@ -8,6 +8,7 @@ type TopBarProps = {
   onSectionChange: (section: SectionKey) => void;
   onLogout: () => void;
   userName: string;
+  userRoles: string[];
 };
 
 const MENU_ITEMS: { key: SectionKey; label: string }[] = [
@@ -17,13 +18,18 @@ const MENU_ITEMS: { key: SectionKey; label: string }[] = [
   { key: "config", label: "Config" },
 ];
 
-export default function TopBar({ section, onSectionChange, onLogout, userName }: TopBarProps) {
-  const menuItems = MENU_ITEMS.map((item) =>
-    item.key === "me" ? { ...item, label: userName } : item
-  );
+const getRoleClassName = (role: string) => {
+  const lowerRole = role.toLowerCase();
+  if (lowerRole === "administrator") return "role-admin";
+  if (lowerRole === "pm") return "role-pm";
+  if (lowerRole === "member") return "role-member";
+  return "role-none";
+};
+
+export default function TopBar({ section, onSectionChange, onLogout, userName, userRoles }: TopBarProps) {
   const orderedMenuItems = [
-    ...menuItems.filter((item) => item.key !== "me"),
-    ...menuItems.filter((item) => item.key === "me"),
+    ...MENU_ITEMS.filter((item) => item.key !== "me"),
+    ...MENU_ITEMS.filter((item) => item.key === "me"),
   ];
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -39,16 +45,46 @@ export default function TopBar({ section, onSectionChange, onLogout, userName }:
     return () => window.removeEventListener("click", handleClick);
   }, []);
 
+  const safeGithubUrl = APP_CONFIG.githubUrl.startsWith("https://github.com/")
+    ? APP_CONFIG.githubUrl
+    : "https://github.com/";
+  const safeRoles = userRoles.length > 0 ? userRoles : ["N/A"];
+
+  const renderMeLabel = () => (
+    <span className="me-menu-wrap">
+      <span className="me-menu-name">{userName}</span>
+      <span className="me-menu-badges">
+        {safeRoles.map((role) => (
+          <span key={role} className={`role-badge me-menu-badge ${getRoleClassName(role)}`}>
+            {role}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+
   return (
     <header className="top-bar">
-      <button
-        type="button"
-        className="brand"
-        onClick={() => onSectionChange("events")}
-      >
-        <img className="logo small" src={APP_CONFIG.logoUrl} alt={APP_CONFIG.appTitle} />
-        <span>{APP_CONFIG.appTitle}</span>
-      </button>
+      <div className="top-bar-left">
+        <button
+          type="button"
+          className="brand"
+          onClick={() => onSectionChange("events")}
+        >
+          <img className="logo small" src={APP_CONFIG.logoUrl} alt={APP_CONFIG.appTitle} />
+          <span>{APP_CONFIG.appTitle}</span>
+        </button>
+        <a
+          className="menu-item github-button"
+          href={safeGithubUrl}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="GitHub Repository"
+          title="GitHub Repository"
+        >
+          <img className="github-icon" src="/github-logo.svg" alt="GitHub" />
+        </a>
+      </div>
       <nav className="menu">
         {orderedMenuItems.map((item) => (
           <button
@@ -57,7 +93,7 @@ export default function TopBar({ section, onSectionChange, onLogout, userName }:
             className={section === item.key ? "menu-item active" : "menu-item"}
             onClick={() => onSectionChange(item.key)}
           >
-            {item.label}
+            {item.key === "me" ? renderMeLabel() : item.label}
           </button>
         ))}
         <button type="button" className="menu-item danger" onClick={onLogout}>
@@ -88,7 +124,7 @@ export default function TopBar({ section, onSectionChange, onLogout, userName }:
                   setOpen(false);
                 }}
               >
-                {item.label}
+                {item.key === "me" ? renderMeLabel() : item.label}
               </button>
             ))}
             <button

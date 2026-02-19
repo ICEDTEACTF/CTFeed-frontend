@@ -61,6 +61,7 @@ export default function App() {
     () => profile?.discord?.display_name ?? profile?.discord?.name ?? "Me",
     [profile]
   );
+  const userRoles = useMemo(() => profile?.user_role ?? [], [profile]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -136,19 +137,22 @@ export default function App() {
         onSectionChange={handleSectionChange}
         onLogout={handleLogout}
         userName={userName}
+        userRoles={userRoles}
       />
       <main className="content">
         {section === "events" && (
           <EventSection
             selectedEventId={selectedEventId}
             onSelectEvent={handleSelectEvent}
+            onOpenUser={handleSelectUser}
           />
         )}
-        {section === "me" && <MeSection />}
+        {section === "me" && <MeSection onOpenEvent={handleSelectEvent} />}
         {section === "users" && (
           <UserSection
             selectedUserId={selectedUserId}
             onSelectUser={handleSelectUser}
+            onOpenEvent={handleSelectEvent}
           />
         )}
         {section === "config" && <ConfigSection />}

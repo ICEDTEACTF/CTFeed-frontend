@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
-type ModalVariant = "alert" | "confirm" | "input";
+type ModalVariant = "alert" | "confirm" | "input" | "select";
+
+type ModalSelectOption = {
+  label: string;
+  value: string;
+};
 
 type ModalProps = {
   open: boolean;
@@ -10,6 +15,7 @@ type ModalProps = {
   inputLabel?: string;
   inputPlaceholder?: string;
   inputDefaultValue?: string;
+  selectOptions?: ModalSelectOption[];
   confirmLabel?: string;
   cancelLabel?: string;
   onConfirm: (value?: string) => void;
@@ -24,6 +30,7 @@ export default function Modal({
   inputLabel = "",
   inputPlaceholder = "",
   inputDefaultValue = "",
+  selectOptions = [],
   confirmLabel = "OK",
   cancelLabel = "Cancel",
   onConfirm,
@@ -35,7 +42,7 @@ export default function Modal({
     if (open) {
       setValue(inputDefaultValue);
     }
-  }, [open, inputDefaultValue]);
+  }, [open, inputDefaultValue, variant]);
 
   if (!open) return null;
 
@@ -64,6 +71,21 @@ export default function Modal({
               />
             </label>
           )}
+          {variant === "select" && (
+            <label className="modal-field">
+              <span className="label">{inputLabel}</span>
+              <select
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+              >
+                {selectOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
         <div className="modal-actions">
           {variant !== "alert" && (
@@ -74,7 +96,7 @@ export default function Modal({
           <button
             type="button"
             className="primary"
-            onClick={() => onConfirm(variant === "input" ? value : undefined)}
+            onClick={() => onConfirm(variant === "input" || variant === "select" ? value : undefined)}
           >
             {confirmLabel}
           </button>
