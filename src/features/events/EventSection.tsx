@@ -382,7 +382,7 @@ export default function EventSection({ selectedEventId, onSelectEvent, onOpenUse
     }
     const options = channels.map((channel) => ({
       value: channel.id,
-      label: `${channel.name} (${channel.id})`,
+      label: channel.name,
     }));
     const defaultValue =
       selected.channel_id && channels.some((channel) => channel.id === selected.channel_id)

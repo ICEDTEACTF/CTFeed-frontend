@@ -379,14 +379,16 @@ a {
   position: fixed;
   inset: 0;
   background: rgba(8, 10, 12, 0.6);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 20px;
   z-index: 50;
 }
 
 .modal-card {
   width: min(420px, 100%);
+  max-width: 100%;
   background: var(--surface-alt);
   border-radius: 16px;
   border: 1px solid var(--border);
@@ -395,6 +397,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-x: hidden;
 }
 
 .modal-header h3 {
@@ -432,6 +435,9 @@ a {
 }
 
 .modal-field input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -440,6 +446,9 @@ a {
 }
 
 .modal-field select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -748,6 +757,10 @@ a {
   flex-wrap: wrap;
 }
 
+.config-card > div {
+  min-width: 0;
+}
+
 .config-meta {
   display: flex;
   flex-direction: column;
@@ -822,7 +835,7 @@ a {
   padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  min-width: 240px;
+  min-width: 0;
   background: var(--surface);
   color: var(--ink);
 }
@@ -918,6 +931,7 @@ a {
   }
 
   .config-edit input,
+  .config-edit select,
   .config-edit button {
     width: 100%;
   }
