@@ -145,6 +145,7 @@ export default function App() {
             selectedEventId={selectedEventId}
             onSelectEvent={handleSelectEvent}
             onOpenUser={handleSelectUser}
+            userRoles={userRoles}
           />
         )}
         {section === "me" && <MeSection onOpenEvent={handleSelectEvent} />}
