@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "echo \"export const APP_COMMIT_ID = '$(git rev-parse --short HEAD 2>/dev/null || echo dev)';\" > src/commit.ts && vite",
+    "build": "echo \"export const APP_COMMIT_ID = '$(git rev-parse --short HEAD 2>/dev/null || echo unknown)';\" > src/commit.ts && tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

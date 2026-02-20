@@ -48,6 +48,7 @@ export default function TopBar({ section, onSectionChange, onLogout, userName, u
   const safeGithubUrl = APP_CONFIG.githubUrl.startsWith("https://github.com/")
     ? APP_CONFIG.githubUrl
     : "https://github.com/";
+  const safeCommitId = /^[0-9a-f]{7,40}$/i.test(APP_CONFIG.commitId) ? APP_CONFIG.commitId : "";
   const safeRoles = userRoles.length > 0 ? userRoles : ["N/A"];
 
   const renderMeLabel = () => (
@@ -84,6 +85,7 @@ export default function TopBar({ section, onSectionChange, onLogout, userName, u
         >
           <img className="github-icon" src="/github-logo.svg" alt="GitHub" />
         </a>
+        {safeCommitId && <span className="commit-id">#{safeCommitId}</span>}
       </div>
       <nav className="menu">
         {orderedMenuItems.map((item) => (

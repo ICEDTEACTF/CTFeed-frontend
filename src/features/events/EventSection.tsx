@@ -465,6 +465,7 @@ export default function EventSection({ selectedEventId, onSelectEvent, onOpenUse
                 <div className="list-title">{event.title}</div>
                 <div className="list-meta">
                   <span>{event.type}</span>
+                  <span>{event.users?.length ?? 0} participants</span>
                 </div>
                 {(event.channel_id || event.now_running || event.archived) && (
                   <div className="list-flags">
