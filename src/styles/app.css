@@ -130,36 +130,42 @@ a {
   font-weight: 600;
 }
 
-.github-button {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-}
-
 .github-icon {
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   display: block;
   object-fit: contain;
 }
 
-.github-button:hover {
+.repo-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.repo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.repo-badge:hover {
   border-color: rgba(54, 195, 184, 0.55);
 }
 
-.commit-id {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
+.repo-label {
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.repo-commit {
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1;
@@ -887,7 +893,7 @@ a {
   }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1180px) {
   .menu {
     display: none;
   }
@@ -897,11 +903,16 @@ a {
   }
 
   .top-bar {
-    padding: 14px 20px;
+    padding: 14px 18px;
+    gap: 12px;
   }
 
   .top-bar-left {
     gap: 8px;
+  }
+
+  .repo-links {
+    display: none;
   }
 
   .menu-panel .me-menu-wrap {
@@ -916,17 +927,20 @@ a {
     gap: 6px;
   }
 
-  .github-button {
-    width: 36px;
-    height: 36px;
+  .repo-links {
+    gap: 6px;
   }
 
   .github-icon {
-    width: 22px;
-    height: 22px;
+    width: 14px;
+    height: 14px;
   }
 
-  .commit-id {
+  .repo-badge {
+    padding: 6px 8px;
+  }
+
+  .repo-badge-frontend .repo-commit {
     display: none;
   }
 }

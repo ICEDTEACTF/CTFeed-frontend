@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "./api/client";
 import { API_ENDPOINTS } from "./api/endpoints";
-import type { User } from "./api/types";
+import type { GeneralResponse, User } from "./api/types";
 import { APP_CONFIG } from "./config";
 import TopBar from "./components/TopBar";
 import HomePage from "./features/home/HomePage";
@@ -54,6 +54,7 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [section, setSection] = useState<SectionKey>("events");
   const [profile, setProfile] = useState<User | null>(null);
+  const [backendVersion, setBackendVersion] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
@@ -74,9 +75,16 @@ export default function App() {
         setSelectedEventId(route.eventId ?? null);
         setSelectedUserId(route.userId ?? null);
         window.history.replaceState({}, "", buildPath(route.section, route.eventId, route.userId));
+        const versionResult = await apiRequest<GeneralResponse>(API_ENDPOINTS.meta.version);
+        if (versionResult.ok && versionResult.data?.success) {
+          setBackendVersion(versionResult.data.message ?? "");
+        } else {
+          setBackendVersion("");
+        }
       } else {
         setAuthenticated(false);
         setProfile(null);
+        setBackendVersion("");
         window.history.replaceState({}, "", "/");
       }
       setChecking(false);
@@ -138,6 +146,7 @@ export default function App() {
         onLogout={handleLogout}
         userName={userName}
         userRoles={userRoles}
+        backendVersion={backendVersion}
       />
       <main className="content">
         {section === "events" && (
@@ -145,6 +154,7 @@ export default function App() {
             selectedEventId={selectedEventId}
             onSelectEvent={handleSelectEvent}
             onOpenUser={handleSelectUser}
+            userRoles={userRoles}
           />
         )}
         {section === "me" && <MeSection onOpenEvent={handleSelectEvent} />}

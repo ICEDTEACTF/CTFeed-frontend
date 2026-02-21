@@ -1,7 +1,7 @@
 import { useEffect, useState, type UIEvent } from "react";
 import { apiRequest } from "../../api/client";
 import { API_ENDPOINTS } from "../../api/endpoints";
-import type { DiscordChannel, EventItem, GeneralResponse } from "../../api/types";
+import type { DiscordChannel, EventItem, GeneralResponse, UserSimple } from "../../api/types";
 import { formatTimestampToLocal } from "../../utils/date";
 import Modal from "../../components/Modal";
 
@@ -11,6 +11,7 @@ type EventSectionProps = {
   selectedEventId: string | null;
   onSelectEvent: (id: string) => void;
   onOpenUser: (id: string) => void;
+  userRoles: UserSimple["user_role"];
 };
 
 type EventCursor = {
@@ -20,7 +21,7 @@ type EventCursor = {
 
 const PAGE_SIZE = 20;
 
-export default function EventSection({ selectedEventId, onSelectEvent, onOpenUser }: EventSectionProps) {
+export default function EventSection({ selectedEventId, onSelectEvent, onOpenUser, userRoles }: EventSectionProps) {
   const [eventType, setEventType] = useState<EventType>("ctftime");
   const [archivedOnly, setArchivedOnly] = useState(false);
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -41,6 +42,8 @@ export default function EventSection({ selectedEventId, onSelectEvent, onOpenUse
   const [modalSelectOptions, setModalSelectOptions] = useState<{ label: string; value: string }[]>([]);
   const [modalConfirmLabel, setModalConfirmLabel] = useState("OK");
   const [modalAction, setModalAction] = useState<(value?: string) => void>(() => () => {});
+  const canArchive = userRoles.includes("pm");
+  const canRelink = userRoles.includes("Administrator");
 
   const getSafeChannelLink = (jumpUrl?: string | null) => {
     if (!jumpUrl) return null;
@@ -338,7 +341,7 @@ export default function EventSection({ selectedEventId, onSelectEvent, onOpenUse
 
   const handleArchive = async () => {
     if (!selected) return;
-    openConfirm("Archive Event", "Archive this event? PM permission required.", async () => {
+    openConfirm("Archive Event", "Archive this event?", async () => {
       const result = await apiRequest<GeneralResponse>(API_ENDPOINTS.events.archive(selected.id), {
         method: "PATCH",
       });
@@ -522,16 +525,20 @@ export default function EventSection({ selectedEventId, onSelectEvent, onOpenUse
                 <button type="button" className="primary" onClick={handleJoin}>
                   Join Channel
                 </button>
-                <button type="button" className="secondary" onClick={handleArchive}>
-                  (PM) Archive
-                </button>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={handleOpenRelinkModal}
-                >
-                  (PM) Relink
-                </button>
+                {canArchive && (
+                  <button type="button" className="secondary" onClick={handleArchive}>
+                    Archive
+                  </button>
+                )}
+                {canRelink && (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={handleOpenRelinkModal}
+                  >
+                    Relink Channel
+                  </button>
+                )}
               </div>
               <div className="detail-sub detail-sub-spacious">
                 <span className="label">Joined Users</span>

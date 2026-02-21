@@ -1,4 +1,7 @@
 export const API_ENDPOINTS = {
+  meta: {
+    version: "/version",
+  },
   auth: {
     discord: "/auth/discord",
     login: "/auth/login",
